@@ -5,6 +5,13 @@ A simple, global backup utility for Windows, written in C++. Includes a user-fri
 
 ---
 
+Future Plans:
+Adding .backupignore file compability
+For not backing up unwanted folders/files
+
+---
+
+
 ## Bugs
 `backup remove-command` not implemented in Commandprompt/PowerShell yet. Please use `setup.bat`.
 
