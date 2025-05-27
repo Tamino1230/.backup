@@ -1,4 +1,13 @@
 @echo off
+REM * Check for admin rights
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ============================
+    echo.
+    echo * This script requires administrative privileges. Please run as administrator.
+    pause
+    exit /b 1
+)
 REM * ============================
 REM * AutoBackup Setup Utility
 REM * ============================
@@ -10,23 +19,18 @@ echo =============================
 echo .backup by Tamino1230
 echo 1. Install backup command
 echo 2. Uninstall backup command
-echo 3. Exit
+echo 3. Check if installed
+echo 4. Exit
 echo.
-set /p choice=Enter your choice (1-3): 
+set /p choice=Enter your choice (1-4): 
 if "%choice%"=="1" goto INSTALL
 if "%choice%"=="2" goto UNINSTALL
-if "%choice%"=="3" exit /b
+if "%choice%"=="3" goto CHECK
+if "%choice%"=="4" exit /b
 echo Invalid choice. Please try again.
 goto MENU
 
 :INSTALL
-REM * Check for admin rights
-net session >nul 2>&1
-if %errorlevel% neq 0 (
-    echo * This script requires administrative privileges. Please run as administrator.
-    pause
-    goto MENU
-)
 REM * Initialize status variables
 set "STATUS_COPY=OK"
 set "STATUS_ALIAS=OK"
@@ -109,5 +113,34 @@ if "%STATUS_ALIAS_REMOVE%"=="OK" (
 )
 echo =============================
 endlocal
+pause
+goto MENU
+
+:CHECK
+REM * Check installation status
+set "STATUS_COPY=NOT FOUND"
+set "STATUS_ALIAS=NOT FOUND"
+set "STATUS_PATH=NOT FOUND / Not required"
+REM * Check backup.exe
+if exist "%USERPROFILE%\backup.exe" set "STATUS_COPY=OK"
+REM * Check PowerShell alias
+set "PROFILE=%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
+if exist "%PROFILE%" (
+    findstr /i "Set-Alias backup" "%PROFILE%" >nul 2>&1 && set "STATUS_ALIAS=OK"
+)
+REM * Check PATH
+set "PATH_FOUND=NO"
+for %%A in ("%PATH:;=" "") do (
+    if /I "%%~A"=="%USERPROFILE%" set "PATH_FOUND=YES"
+)
+if "%PATH_FOUND%"=="YES" set "STATUS_PATH=OK"
+REM * Show summary
+cls
+echo =============================
+echo * Installation Check Summary
+echo   - backup.exe: %STATUS_COPY%
+echo   - PowerShell alias: %STATUS_ALIAS%
+echo   - User profile in PATH: %STATUS_PATH%
+echo =============================
 pause
 goto MENU
