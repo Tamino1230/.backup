@@ -1,4 +1,3 @@
-
 //* TESTSCRIPT FOR BACKUP SYSTEM
 //* DELETE LATER
 
@@ -58,11 +57,6 @@ void autoBackup(int minutes) {
 void removeAllBackups() {
     fs::remove_all(".backup");
     cout << "All backups removed." << endl;
-}
-
-void removeBackupCommand() {
-    //* future implementation
-    cout << "Backup command unregistered." << endl;
 }
 
 //* function to show help menu

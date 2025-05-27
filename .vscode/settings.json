@@ -3,6 +3,7 @@
         "xstring": "cpp",
         "filesystem": "cpp",
         "chrono": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "algorithm": "cpp"
     }
 }

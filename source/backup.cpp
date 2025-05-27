@@ -1,9 +1,13 @@
+//! Main File: backup.cpp
+
 #include <iostream>
 #include <filesystem>
 #include <chrono>
 #include <thread>
 #include <iomanip>
 #include <sstream>
+#include <vector>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 using namespace std;
@@ -56,6 +60,55 @@ void removeAllBackups() {
     cout << "All backups removed." << endl;
 }
 
+void removeBackupCommand() {
+    //* future implementation
+    cout << "Backup command unregistered." << endl;
+}
+
+//* function to get sorted backup directories
+vector<fs::directory_entry> getSortedBackups() {
+    vector<fs::directory_entry> backups;
+    if (fs::exists(".backup") && fs::is_directory(".backup")) {
+        for (const auto& entry : fs::directory_iterator(".backup")) {
+            if (fs::is_directory(entry)) {
+                backups.push_back(entry);
+            }
+        }
+        sort(backups.begin(), backups.end(), [](const fs::directory_entry& a, const fs::directory_entry& b) {
+            return a.path().filename().string() > b.path().filename().string(); // newest first
+        });
+    }
+    return backups;
+}
+
+//* function to restore from a backup directory
+void restoreBackup(const fs::path& backupDir) {
+    for (const auto& file : fs::directory_iterator(backupDir)) {
+        fs::copy(file.path(), "./" + file.path().filename().string(), fs::copy_options::overwrite_existing);
+    }
+    cout << "Restored from backup: " << backupDir << endl;
+}
+
+//* function to pull last backup
+void pullLastBackup() {
+    auto backups = getSortedBackups();
+    if (!backups.empty()) {
+        restoreBackup(backups[0].path());
+    } else {
+        cout << "No backups found." << endl;
+    }
+}
+
+//* function to pull specific backup by index
+void pullSpecificBackup(int index) {
+    auto backups = getSortedBackups();
+    if (index >= 0 && index < backups.size()) {
+        restoreBackup(backups[index].path());
+    } else {
+        cout << "Backup index out of range." << endl;
+    }
+}
+
 //* function to show help menu
 void showHelp() {
     cout << "Backup Manager Commands:\n";
@@ -63,6 +116,8 @@ void showHelp() {
     cout << "  backup do              -> Create a new backup\n";
     cout << "  backup auto --min X    -> Auto backup every X minutes\n";
     cout << "  backup remove --all    -> Delete all backups\n";
+    cout << "  backup pull --last     -> Restore from the last backup\n";
+    cout << "  backup pull --specific N -> Restore from the Nth last backup (0 = last, 1 = second last, etc)\n";
     cout << "  backup help            -> Show available commands\n";
     cout << "  backup remove-command  -> Unregister backup command\n";
 }
@@ -87,6 +142,11 @@ int main(int argc, char* argv[]) {
         removeAllBackups();
     } else if (command == "help") {
         showHelp();
+    } else if (command == "pull" && argc == 3 && string(argv[2]) == "--last") {
+        pullLastBackup();
+    } else if (command == "pull" && argc == 4 && string(argv[2]) == "--specific") {
+        int idx = stoi(argv[3]);
+        pullSpecificBackup(idx);
     } else {
         cout << "Invalid command. Use `backup help` for options.\n";
     }
