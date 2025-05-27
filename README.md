@@ -10,11 +10,11 @@ A simple, global backup utility for Windows, written in C++. Includes a user-fri
 ---
 
 ## Preview
-<img src="examples/example_codebase.png" height="150px">
+<img src="examples/example_codebase.png" height="200px">
 
-<img src="examples/cmdwindow_backup_setup.png" height="150px">
+<img src="examples/cmdwindow_backup_setup.png" height="200px">
 
-<img src="examples/backup_command_usage.png" height="150px">
+<img src="examples/backup_command_usage.png" height="200px">
 
 ---
 
