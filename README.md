@@ -24,6 +24,9 @@ A simple, global backup utility for Windows, written in C++. Includes a user-fri
 * Remove all backups or just the command
 * Menu-driven installer/uninstaller (`setup.bat`)
 * No admin rights required for backup usage (only for install/uninstall)
+* **Meta info:** `backup init` creates a `.backup/__init__` file with metadata (author, folder, timestamp, and init status)
+* **Safety:** All commands except `init`, `meta`, and `help` require initialization first
+* **View meta:** Use `backup meta` to display backup metadata
 
 ---
 
@@ -72,6 +75,13 @@ After installation, use the following commands globally in CMD or PowerShell:
 | `backup auto --min X`          | Run automatic backups every X mins |
 | `backup remove --all`          | Remove all backups                 |
 | `backup remove-command`        | Unregister the backup command      |
+| `backup meta`                  | Show backup meta information       |
+| `backup help`                  | Show available commands            |
+
+> **Note:**
+> - You must run `backup init` before using any other command (except `meta` and `help`).
+> - `backup init` creates `.backup/__init__` with metadata: `init: True`, author, folder, and timestamp.
+> - `backup meta` displays this metadata.
 
 ---
 

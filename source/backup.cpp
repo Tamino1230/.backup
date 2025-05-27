@@ -8,6 +8,8 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <fstream>
+#include <cstdlib>
 
 namespace fs = std::filesystem;
 using namespace std;
@@ -24,10 +26,66 @@ string getTimestamp() {
     return ss.str();
 }
 
+//* function to get current username (cross-platform)
+string getCurrentUser() {
+#ifdef _WIN32
+    char* user = nullptr;
+    size_t len = 0;
+    errno_t err = _dupenv_s(&user, &len, "USERNAME");
+    string result = (err == 0 && user) ? string(user) : "unknown";
+    if (user) free(user);
+    return result;
+#else
+    const char* user = getenv("USER");
+    return user ? string(user) : "unknown";
+#endif
+}
+
+//* function to get current working directory
+string getCurrentDir() {
+    return fs::current_path().string();
+}
+
 //* function to initialize backup system
 void initBackup() {
     fs::create_directories(".backup");
+    // Write metadata to .backup/__init__
+    ofstream metaFile(".backup/__init__");
+    metaFile << "init: True" << endl;
+    metaFile << "author: " << getCurrentUser() << endl;
+    metaFile << "folder: " << getCurrentDir() << endl;
+    metaFile << "timestamp: " << getTimestamp() << endl;
+    metaFile.close();
     cout << "Backup system initialized in `.backup/` folder." << endl;
+}
+
+//* function to check if backup is initialized
+bool isBackupInitialized() {
+    ifstream metaFile(".backup/__init__");
+    if (!metaFile) return false;
+    string line;
+    while (getline(metaFile, line)) {
+        if (line.find("init: True") != string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+//* function to show backup meta info
+void showBackupMeta() {
+    string metaPath = ".backup/__init__";
+    ifstream metaFile(metaPath);
+    if (!metaFile) {
+        cout << "No backup meta found. Please run `backup init` first." << endl;
+        return;
+    }
+    cout << "Backup Meta Information:" << endl;
+    string line;
+    while (getline(metaFile, line)) {
+        cout << "  " << line << endl;
+    }
+    metaFile.close();
 }
 
 //* function to create a backup
@@ -118,6 +176,7 @@ void showHelp() {
     cout << "  backup remove --all    -> Delete all backups\n";
     cout << "  backup pull --last     -> Restore from the last backup\n";
     cout << "  backup pull --specific N -> Restore from the Nth last backup (0 = last, 1 = second last, etc)\n";
+    cout << "  backup meta            -> Show backup meta information\n";
     cout << "  backup help            -> Show available commands\n";
     cout << "  backup remove-command  -> Unregister backup command\n";
 }
@@ -130,6 +189,14 @@ int main(int argc, char* argv[]) {
     }
 
     string command = argv[1];
+
+    // Only allow these commands before init
+    if (command != "init" && command != "meta" && command != "help") {
+        if (!isBackupInitialized()) {
+            cout << "Backup system not initialized. Please run `backup init` first." << endl;
+            return 1;
+        }
+    }
 
     if (command == "init") {
         initBackup();
@@ -147,6 +214,8 @@ int main(int argc, char* argv[]) {
     } else if (command == "pull" && argc == 4 && string(argv[2]) == "--specific") {
         int idx = stoi(argv[3]);
         pullSpecificBackup(idx);
+    } else if (command == "meta") {
+        showBackupMeta();
     } else {
         cout << "Invalid command. Use `backup help` for options.\n";
     }
