@@ -89,15 +89,26 @@ After installation, use the following commands globally in CMD or PowerShell:
 
 To build the backup tool from source:
 
-1. Open `source/backup.cpp` in Visual Studio (or any C++ IDE), and build, or  
-2. Download and install the [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) so that the `cl` compiler is available on your system.
-2. Use the command line:
+### Building the Backup Tool
 
-> **Note:** For best results, open the project in Visual Studio 2022 Developer Command Prompt before building.
-```cmd
-cd path/to/.backup-repo
-cl source\backup.cpp /std:c++17 /Fe:exe\backup.exe
-```
+1. **Open the Project in Visual Studio:**
+    - Launch Visual Studio.
+    - Go to **File > Open > File...** and select `source/backup.cpp`.
+    - (Optional) Create a new empty C++ project and add `backup.cpp` to it for easier management.
+
+2. **Configure Build Settings:**
+    - Set the project to use the C++17 standard (Project Properties > C/C++ > Language > C++ Language Standard > ISO C++17 Standard).
+    - Set the output directory to `exe\` (Project Properties > Configuration Properties > General > Output Directory).
+
+3. **Build the Executable:**
+    - Press **Ctrl+Shift+B** or select **Build > Build Solution**.
+    - After building, ensure that `backup.exe` is created in the `exe\` folder.
+
+4. **Move the Executable (if needed):**
+    - If the executable is not in the `exe\` directory, manually move the built `backup.exe` from the project's output folder (e.g., `Debug` or `Release`) to the `exe\` directory at the root of your repository.
+
+> **Tip:** You can also use the Visual Studio Developer Command Prompt to build with `cl`, but using the Visual Studio IDE is recommended for easier configuration and error checking.
+
 
 ---
 
