@@ -85,6 +85,7 @@ To build the backup tool from source:
 
 > **Note:** For best results, open the project in Visual Studio 2022 Developer Command Prompt before building.
 ```cmd
+cd path/to/.backup-repo
 cl source\backup.cpp /std:c++17 /Fe:exe\backup.exe
 ```
 
