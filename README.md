@@ -1,4 +1,5 @@
-# AutoBackup System
+# .backup System
+by Tamino1230
 
 A simple, global backup utility for Windows, written in C++. Includes a user-friendly installer and uninstaller for easy setup and removal.
 
