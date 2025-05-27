@@ -52,9 +52,7 @@ setup.bat
 ```
 
 ### Manual Setup
-```
 Removed `install.bat` and `uninstall.bat` and got replaced with `setup.bat`
-```
 
 ---
 
