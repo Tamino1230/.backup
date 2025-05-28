@@ -11,6 +11,20 @@ For not backing up unwanted folders/files
 
 ---
 
+## For running .backup ->
+You need to have installed (from Visual Studio):  
+[Visual Studio Community Edition](https://visualstudio.microsoft.com/vs/community/) or higher with the following components:  
+- **Desktop development with C++**  
+- **MSVC v142 - VS 2019 C++ x64/x86 build tools**  
+- **Windows 10 SDK (10.0.18362.0)**  
+
+Ensure these are selected during installation or added via the Visual Studio Installer.
+
+<img src="examples/need_have_installed_2.png" height="150px">
+<img src="examples/need_have_installed.png" height="150px">
+
+---
+
 
 ## Bugs
 `backup remove-command` not implemented in Commandprompt/PowerShell yet. Please use `setup.bat`.
