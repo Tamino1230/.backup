@@ -46,6 +46,7 @@ For not backing up unwanted folders/files
 | `exe/backup.exe`   | Compiled executable (gets used by setup.py)                   |
 | `setup.bat`        | Main menu-driven installer/uninstaller (recommended)          |
 | `.backup/`         | (Created by tool) Directory where backups are stored          |
+| `testscript.cpp`   | Used for future Code |
 
 ---
 
