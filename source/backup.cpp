@@ -10,6 +10,11 @@
 #include <algorithm>
 #include <fstream>
 #include <cstdlib>
+#include <ctime>
+#include <set>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace fs = std::filesystem;
 using namespace std;
@@ -79,17 +84,37 @@ bool isBackupInitialized() {
     return false;
 }
 
-//* function to create a backup safely
+//* function to read .backupignore patterns
+set<string> readBackupIgnore() {
+    set<string> ignore;
+    ifstream ignoreFile(".backupignore");
+    string line;
+    while (getline(ignoreFile, line)) {
+        // Remove whitespace
+        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+        if (!line.empty() && line[0] != '#') {
+            ignore.insert(line);
+        }
+    }
+    return ignore;
+}
+
+//* function to create a backup safely (with .backupignore support)
 void createBackup() {
     try {
+        set<string> ignore = readBackupIgnore();
         string backupDir = ".backup/Backup_" + getTimestamp();
         fs::create_directories(backupDir);
 
         for (const auto& file : fs::directory_iterator(".")) {
             string filename = file.path().filename().string();
-            if (filename != "backup.cpp" && filename != ".backup") {
-                fs::copy(file.path(), backupDir + "/" + filename, fs::copy_options::overwrite_existing);
+            if (filename == ".backup") continue;
+            if (filename == ".backupignore") {
+                // Always include .backupignore in backup
+            } else if (ignore.count(filename)) {
+                continue;
             }
+            fs::copy(file.path(), backupDir + "/" + filename, fs::copy_options::overwrite_existing);
         }
         cout << "Backup saved to: " << backupDir << endl;
     } catch (const exception& e) {
@@ -180,40 +205,79 @@ void showBackupMeta() {
     }
 }
 
-//* main function
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        cout << "Usage: backup <command/help>\n";
-        return 1;
-    }
+//* function to get the path to the running executable
+string getExecutableDir() {
+#ifdef _WIN32
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    string exePath(path);
+    size_t pos = exePath.find_last_of("/\\");
+    return (pos != string::npos) ? exePath.substr(0, pos) : "";
+#else
+    char result[1024];
+    ssize_t count = readlink("/proc/self/exe", result, 1024);
+    string exePath(count != -1 ? string(result, count) : "");
+    size_t pos = exePath.find_last_of("/");
+    return (pos != string::npos) ? exePath.substr(0, pos) : "";
+#endif
+}
 
-    string command = argv[1];
-
-    if (command != "init" && command != "help") {
-        if (!isBackupInitialized()) {
-            cout << "Backup system not initialized. Please run `backup init` first." << endl;
-            return 1;
+//* function to set the working directory to the executable's directory
+void setWorkingDirToExe() {
+    try {
+        string exeDir = getExecutableDir();
+        if (!exeDir.empty()) {
+            fs::current_path(exeDir);
         }
+    } catch (const exception& e) {
+        cerr << "Error setting working directory: " << e.what() << endl;
     }
+}
 
-    if (command == "init") {
+//* function to parse and execute commands
+void executeCommand(const string& cmd) {
+    if (cmd == "backup init") {
         initBackup();
-    } else if (command == "do") {
-        createBackup();
-    } else if (command == "auto" && argc == 4 && string(argv[2]) == "--min") {
-        int minutes = stoi(argv[3]);
-        autoBackup(minutes);
-    } else if (command == "remove" && argc == 3 && string(argv[2]) == "--all") {
+    } else if (cmd == "backup do") {
+        if (isBackupInitialized()) {
+            createBackup();
+        } else {
+            cerr << "Backup not initialized. Run `backup init` first." << endl;
+        }
+    } else if (cmd.find("backup auto --min ") == 0) {
+        int minutes = stoi(cmd.substr(18));
+        if (isBackupInitialized()) {
+            thread([minutes]() { autoBackup(minutes); }).detach();
+            cout << "Automatic backup set every " << minutes << " minutes." << endl;
+        } else {
+            cerr << "Backup not initialized. Run `backup init` first." << endl;
+        }
+    } else if (cmd == "backup remove --all") {
         removeAllBackups();
-    } else if (command == "pull" && argc == 3 && string(argv[2]) == "--last") {
+    } else if (cmd == "backup pull --last") {
         pullLastBackup();
-    } else if (command == "meta") {
+    } else if (cmd == "backup meta") {
         showBackupMeta();
-    } else if (command == "help") {
+    } else if (cmd == "backup help") {
         showHelp();
     } else {
-        cout << "Invalid command. Use `backup help` for options.\n";
+        cerr << "Unknown command: " << cmd << endl;
+        showHelp();
     }
+}
 
+int main(int argc, char* argv[]) {
+    try {
+        setWorkingDirToExe();
+        if (argc > 1) {
+            string cmd = argv[1];
+            executeCommand(cmd);
+        } else {
+            cout << "Welcome to Backup Manager!" << endl;
+            showHelp();
+        }
+    } catch (const exception& e) {
+        cerr << "Error: " << e.what() << endl;
+    }
     return 0;
 }
