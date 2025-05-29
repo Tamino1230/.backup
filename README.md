@@ -54,13 +54,15 @@ Ensure these are selected during installation or added via the Visual Studio Ins
 
 The `.backupignore` file allows you to specify files and folders that should be excluded from backups. Place a `.backupignore` file in the root of your project or backup directory. Each line in the file should specify a pattern, file, or folder to ignore.
 
+`NOTE: xxx/ DO NOT WORK BY NOW.`
+
 **Example `.backupignore` file:**
 ```
 # Ignore all log files
 *.log
 
 # Ignore the temp folder
-temp/
+temp/ (Not working currently)
 
 # Ignore a specific file
 secret.txt
@@ -103,6 +105,8 @@ The backup utility includes a logging system to help track operations and diagno
 | `setup.bat`        | Main menu-driven installer/uninstaller (recommended)          |
 | `.backup/`         | (Created by tool) Directory where backups are stored          |
 | `source/testscript.cpp`   | Used for future Code |
+| `.backupignore` | Specifies files/folders to exclude. |
+
 
 ---
 
