@@ -163,6 +163,23 @@ void showHelp() {
     cout << "  backup help            -> Show available commands\n";
 }
 
+void showBackupMeta() {
+    try {
+        ifstream metaFile(".backup/__init__");
+        if (!metaFile) {
+            cout << "No backup metadata found. Is the backup system initialized?" << endl;
+            return;
+        }
+        cout << "Backup Metadata:" << endl;
+        string line;
+        while (getline(metaFile, line)) {
+            cout << "  " << line << endl;
+        }
+    } catch (const exception& e) {
+        cerr << "Error reading backup metadata: " << e.what() << endl;
+    }
+}
+
 //* main function
 int main(int argc, char* argv[]) {
     if (argc < 2) {
