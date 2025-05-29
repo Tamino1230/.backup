@@ -5,12 +5,6 @@ A simple, global backup utility for Windows, written in C++. Includes a user-fri
 
 ---
 
-Future Plans:
-Adding .backupignore file compability
-For not backing up unwanted folders/files
-
----
-
 ## For running .backup ->
 You need to have installed (from Visual Studio):  
 [Visual Studio Community Edition](https://visualstudio.microsoft.com/vs/community/) or higher with the following components:  
@@ -26,8 +20,9 @@ Ensure these are selected during installation or added via the Visual Studio Ins
 ---
 
 
-## Bugs
+## Bugs / Future Implementations
 `backup remove-command` not implemented in Commandprompt/PowerShell yet. Please use `setup.bat`.
+`xxx/` does not work in `.backupignore` (not implemented)
 
 ---
 
