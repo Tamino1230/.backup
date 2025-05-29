@@ -68,6 +68,27 @@ secret.txt
 
 Patterns follow standard glob rules. Lines starting with `#` are treated as comments.
 
+## Logging System
+
+The backup utility includes a logging system to help track operations and diagnose issues. Logs are generated during key actions such as initialization, backup creation, and error handling.
+
+- **Log Location:**  
+    Log files are typically stored in the `.backup/` directory, often named `backup.log` or similar.
+
+- **What Gets Logged:**  
+    - Timestamps for each operation  
+    - Actions performed (e.g., backup started, backup completed, errors)  
+    - Any warnings or errors encountered  
+    - Metadata such as the user, folder, and backup status
+
+- **How It Works:**  
+    The C++ code writes log entries using standard file I/O. Each log entry includes a timestamp and a description of the event. This helps users and developers review what happened during each backup session.
+
+- **Usage:**  
+    If you encounter issues or want to review backup activity, open the log file in the `.backup/` directory. Reviewing logs can help identify problems or confirm successful operations.
+
+---
+
 --- 
 
 

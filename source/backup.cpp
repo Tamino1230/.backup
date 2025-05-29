@@ -19,6 +19,9 @@
 namespace fs = std::filesystem;
 using namespace std;
 
+// Function prototype for logAction
+void logAction(const std::string& entry);
+
 //* function to get a timestamp
 string getTimestamp() {
     auto now = chrono::system_clock::now();
@@ -90,9 +93,16 @@ set<string> readBackupIgnore() {
     ifstream ignoreFile(".backupignore");
     string line;
     while (getline(ignoreFile, line)) {
-        // Remove whitespace
-        line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
-        if (!line.empty() && line[0] != '#') {
+        // Trim whitespace
+        line.erase(line.begin(), find_if(line.begin(), line.end(), [](unsigned char ch) { return !isspace(ch); }));
+        line.erase(find_if(line.rbegin(), line.rend(), [](unsigned char ch) { return !isspace(ch); }).base(), line.end());
+        if (line.empty() || line[0] == '#') continue;
+        // If the line is a directory, add all files in that directory
+        if (fs::is_directory(line)) {
+            for (const auto& entry : fs::directory_iterator(line)) {
+                ignore.insert(entry.path().filename().string());
+            }
+        } else {
             ignore.insert(line);
         }
     }
@@ -105,6 +115,10 @@ void createBackup() {
         set<string> ignore = readBackupIgnore();
         string backupDir = ".backup/Backup_" + getTimestamp();
         fs::create_directories(backupDir);
+        logAction("Created backup directory: " + backupDir);
+
+        // The backup is created inside the .backup directory, which is in the current working directory.
+        // Files and folders from the current directory (except those in .backupignore and .backup itself) are copied.
 
         for (const auto& file : fs::directory_iterator(".")) {
             string filename = file.path().filename().string();
@@ -112,13 +126,17 @@ void createBackup() {
             if (filename == ".backupignore") {
                 // Always include .backupignore in backup
             } else if (ignore.count(filename)) {
+                logAction("Ignored by .backupignore: " + filename);
                 continue;
             }
-            fs::copy(file.path(), backupDir + "/" + filename, fs::copy_options::overwrite_existing);
+            fs::copy(file.path(), backupDir + "/" + filename, fs::copy_options::overwrite_existing | fs::copy_options::recursive);
+            logAction("Saved file to backup: " + filename + " -> " + backupDir + "/" + filename);
         }
         cout << "Backup saved to: " << backupDir << endl;
+        logAction("Backup completed: " + backupDir);
     } catch (const exception& e) {
         cerr << "Error creating backup: " << e.what() << endl;
+        logAction(string("ERROR: ") + e.what());
     }
 }
 
@@ -136,8 +154,10 @@ void removeAllBackups() {
     try {
         fs::remove_all(".backup");
         cout << "All backups removed." << endl;
+        logAction("All backups removed from .backup/");
     } catch (const exception& e) {
         cerr << "Error removing backups: " << e.what() << endl;
+        logAction(string("ERROR: ") + e.what());
     }
 }
 
@@ -146,10 +166,13 @@ void restoreBackup(const fs::path& backupDir) {
     try {
         for (const auto& file : fs::directory_iterator(backupDir)) {
             fs::copy(file.path(), "./" + file.path().filename().string(), fs::copy_options::overwrite_existing);
+            logAction("Restored file: " + file.path().filename().string() + " from " + backupDir.string());
         }
         cout << "Restored from backup: " << backupDir.string() << endl;
+        logAction("Restored from backup: " + backupDir.string());
     } catch (const exception& e) {
         cerr << "Error restoring backup: " << e.what() << endl;
+        logAction(string("ERROR: ") + e.what());
     }
 }
 
@@ -234,47 +257,100 @@ void setWorkingDirToExe() {
     }
 }
 
+//* function to get log directory in %LOCALAPPDATA%/backup-setup/logs
+string getLogDir() {
+#ifdef _WIN32
+    char* appdata = nullptr;
+    size_t len = 0;
+    _dupenv_s(&appdata, &len, "LOCALAPPDATA");
+    string dir = appdata ? string(appdata) + "\\backup-setup\\logs" : "backup-setup/logs";
+    if (appdata) free(appdata);
+    return dir;
+#else
+    const char* appdata = getenv("XDG_DATA_HOME");
+    string dir = appdata ? string(appdata) + "/backup-setup/logs" : string(getenv("HOME")) + "/.local/share/backup-setup/logs";
+    return dir;
+#endif
+}
+
+//* function to log to .backup-logs in logs/ folder in %LOCALAPPDATA%/backup-setup
+void logAction(const string& entry) {
+    // Log to appdata
+    string logDir = getLogDir();
+    fs::create_directories(logDir);
+    string logFile = logDir + "/.backup-logs";
+    ofstream log(logFile, ios::app);
+    if (log) {
+        time_t now = time(nullptr);
+        tm localTime;
+#ifdef _WIN32
+        localtime_s(&localTime, &now);
+#else
+        localtime_r(&now, &localTime);
+#endif
+        char timebuf[32];
+        strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", &localTime);
+        log << "[" << timebuf << "] " << entry << endl;
+    }
+}
+
 //* function to parse and execute commands
 void executeCommand(const string& cmd) {
     if (cmd == "backup init") {
         initBackup();
+        logAction("Ran: backup init");
     } else if (cmd == "backup do") {
         if (isBackupInitialized()) {
             createBackup();
+            logAction("Ran: backup do");
         } else {
             cerr << "Backup not initialized. Run `backup init` first." << endl;
+            logAction("ERROR: Not initialized, attempted backup do");
         }
     } else if (cmd.find("backup auto --min ") == 0) {
         int minutes = stoi(cmd.substr(18));
         if (isBackupInitialized()) {
             thread([minutes]() { autoBackup(minutes); }).detach();
             cout << "Automatic backup set every " << minutes << " minutes." << endl;
+            logAction("Ran: backup auto --min " + to_string(minutes));
         } else {
             cerr << "Backup not initialized. Run `backup init` first." << endl;
+            logAction("ERROR: Not initialized, attempted backup auto");
         }
     } else if (cmd == "backup remove --all") {
         removeAllBackups();
+        logAction("Ran: backup remove --all");
     } else if (cmd == "backup pull --last") {
         pullLastBackup();
+        logAction("Ran: backup pull --last");
     } else if (cmd == "backup meta") {
         showBackupMeta();
+        logAction("Ran: backup meta");
     } else if (cmd == "backup help") {
         showHelp();
+        logAction("Ran: backup help");
+    } else if (cmd.rfind("backup ", 0) == 0) {
+        cerr << "Unknown or invalid arguments for command: '" << cmd.substr(7) << "'\nUse 'backup help' for available commands." << endl;
+        logAction("ERROR: Invalid arguments for command: " + cmd);
     } else {
-        cerr << "Unknown command: " << cmd << endl;
-        showHelp();
+        cerr << "Unknown command. Use 'backup help' for available commands." << endl;
+        logAction("ERROR: Unknown command: " + cmd);
     }
 }
 
 int main(int argc, char* argv[]) {
     try {
-        setWorkingDirToExe();
+        // setWorkingDirToExe(); // Entfernt, damit .backup im aktuellen Ordner bleibt
         if (argc > 1) {
-            string cmd = argv[1];
+            string cmd = "backup";
+            for (int i = 1; i < argc; ++i) {
+                cmd += " ";
+                cmd += argv[i];
+            }
             executeCommand(cmd);
         } else {
-            cout << "Welcome to Backup Manager!" << endl;
-            showHelp();
+            cout << "Usage: `backup (command/help)`\n";
+            cout << "Type 'backup help' for available commands." << endl;
         }
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;

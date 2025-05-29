@@ -19,18 +19,16 @@ set "PATH_SCOPE=USER"
 echo =============================
 echo .backup by Tamino1230
 :ASK_SCOPE
-echo 1. Install backup command (current user)
-echo 2. Install backup command (all users)
-echo 3. Uninstall backup command
-echo 4. Check if installed
-echo 5. Exit
+echo 1. Install backup command
+echo 2. Uninstall backup command
+echo 3. Check if installed
+echo 4. Exit
 echo.
-set /p choice=Enter your choice (1-5): 
-if "%choice%"=="1" set "INSTALL_SCOPE=USER" & set "INSTALL_DIR=%LOCALAPPDATA%\backup-setup" & set "PATH_SCOPE=USER" & goto INSTALL
-if "%choice%"=="2" set "INSTALL_SCOPE=ALL" & set "INSTALL_DIR=%ProgramData%\backup-setup" & set "PATH_SCOPE=SYSTEM" & goto INSTALL
-if "%choice%"=="3" goto UNINSTALL
-if "%choice%"=="4" goto CHECK
-if "%choice%"=="5" exit /b
+set /p choice=Enter your choice (1-4): 
+if "%choice%"=="1" goto INSTALL
+if "%choice%"=="2" goto UNINSTALL
+if "%choice%"=="3" goto CHECK
+if "%choice%"=="4" exit /b
 echo Invalid choice. Please try again.
 goto MENU
 
@@ -43,25 +41,13 @@ REM * Copy backup.exe to install dir
 copy "%~dp0\exe\backup.exe" "%INSTALL_DIR%\backup.exe" >nul 2>&1
 if not exist "%INSTALL_DIR%\backup.exe" set "STATUS_COPY=FAILED"
 REM * Add to PATH
-if "%PATH_SCOPE%"=="USER" (
-    echo %PATH% | find /I "%INSTALL_DIR%" >nul
-    if errorlevel 1 (
-        setx PATH "%PATH%;%INSTALL_DIR%"
-        set "STATUS_PATH=ADDED"
-    ) else (
-        set "STATUS_PATH=EXISTS"
-    )
-) else (
-    REM SYSTEM PATH
-    for /f "tokens=2* delims=    " %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SYSPATH=%%B"
-    echo %SYSPATH% | find /I "%INSTALL_DIR%" >nul
-    if errorlevel 1 (
-        setx PATH "%SYSPATH%;%INSTALL_DIR%" /M
-        set "STATUS_PATH=ADDED"
-    ) else (
-        set "STATUS_PATH=EXISTS"
-    )
-)
+ echo %PATH% | find /I "%INSTALL_DIR%" >nul
+ if errorlevel 1 (
+     setx PATH "%PATH%;%INSTALL_DIR%"
+     set "STATUS_PATH=ADDED"
+ ) else (
+     set "STATUS_PATH=EXISTS"
+ )
 REM * Show summary
 cls
 setlocal enabledelayedexpansion
@@ -87,13 +73,8 @@ goto MENU
 REM * Initialize status variables
 set "STATUS_DEL=OK"
 REM * Remove backup.exe
-if "%INSTALL_SCOPE%"=="ALL" (
-    del "%ProgramData%\backup-setup\backup.exe" >nul 2>&1
-    if exist "%ProgramData%\backup-setup\backup.exe" set "STATUS_DEL=FAILED"
-) else (
-    del "%LOCALAPPDATA%\backup-setup\backup.exe" >nul 2>&1
-    if exist "%LOCALAPPDATA%\backup-setup\backup.exe" set "STATUS_DEL=FAILED"
-)
+del "%LOCALAPPDATA%\backup-setup\backup.exe" >nul 2>&1
+if exist "%LOCALAPPDATA%\backup-setup\backup.exe" set "STATUS_DEL=FAILED"
 REM * Show summary
 cls
 setlocal enabledelayedexpansion
@@ -114,13 +95,11 @@ REM * Check installation status
 set "STATUS_COPY=NOT FOUND"
 set "STATUS_PATH=NOT FOUND"
 REM * Check backup.exe
-if exist "%LOCALAPPDATA%\backup-setup\backup.exe" set "STATUS_COPY=OK (user)"
-if exist "%ProgramData%\backup-setup\backup.exe" set "STATUS_COPY=OK (all users)"
+if exist "%LOCALAPPDATA%\backup-setup\backup.exe" set "STATUS_COPY=OK"
 REM * Check PATH
 set "PATH_FOUND=NO"
 for %%A in ("%PATH:;=" "%") do (
     if /I "%%~A"=="%LOCALAPPDATA%\backup-setup" set "PATH_FOUND=YES"
-    if /I "%%~A"=="%ProgramData%\backup-setup" set "PATH_FOUND=YES"
 )
 if "%PATH_FOUND%"=="YES" set "STATUS_PATH=OK"
 REM * Show summary

@@ -4,6 +4,9 @@
         "filesystem": "cpp",
         "chrono": "cpp",
         "sstream": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "thread": "cpp",
+        "string": "cpp",
+        "set": "cpp"
     }
 }
