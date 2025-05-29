@@ -48,7 +48,28 @@ Ensure these are selected during installation or added via the Visual Studio Ins
 * No admin rights required for backup usage (only for install/uninstall)
 * **Meta info:** `backup init` creates a `.backup/__init__` file with metadata (author, folder, timestamp, and init status)
 * **Safety:** All commands except `init`, `meta`, and `help` require initialization first
-* **View meta:** Use `backup meta` to display backup metadata
+---
+
+## .backupignore Support
+
+The `.backupignore` file allows you to specify files and folders that should be excluded from backups. Place a `.backupignore` file in the root of your project or backup directory. Each line in the file should specify a pattern, file, or folder to ignore.
+
+**Example `.backupignore` file:**
+```
+# Ignore all log files
+*.log
+
+# Ignore the temp folder
+temp/
+
+# Ignore a specific file
+secret.txt
+```
+
+Patterns follow standard glob rules. Lines starting with `#` are treated as comments.
+
+--- 
+
 
 ---
 
