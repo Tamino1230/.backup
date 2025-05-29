@@ -12,61 +12,70 @@ REM * ============================
 REM * AutoBackup Setup Utility
 REM * ============================
 :MENU
-REM * Main menu
 cls
-
+set "INSTALL_SCOPE=USER"
+set "INSTALL_DIR=%LOCALAPPDATA%\backup-setup"
+set "PATH_SCOPE=USER"
 echo =============================
 echo .backup by Tamino1230
-echo 1. Install backup command
-echo 2. Uninstall backup command
-echo 3. Check if installed
-echo 4. Exit
+:ASK_SCOPE
+echo 1. Install backup command (current user)
+echo 2. Install backup command (all users)
+echo 3. Uninstall backup command
+echo 4. Check if installed
+echo 5. Exit
 echo.
-set /p choice=Enter your choice (1-4): 
-if "%choice%"=="1" goto INSTALL
-if "%choice%"=="2" goto UNINSTALL
-if "%choice%"=="3" goto CHECK
-if "%choice%"=="4" exit /b
+set /p choice=Enter your choice (1-5): 
+if "%choice%"=="1" set "INSTALL_SCOPE=USER" & set "INSTALL_DIR=%LOCALAPPDATA%\backup-setup" & set "PATH_SCOPE=USER" & goto INSTALL
+if "%choice%"=="2" set "INSTALL_SCOPE=ALL" & set "INSTALL_DIR=%ProgramData%\backup-setup" & set "PATH_SCOPE=SYSTEM" & goto INSTALL
+if "%choice%"=="3" goto UNINSTALL
+if "%choice%"=="4" goto CHECK
+if "%choice%"=="5" exit /b
 echo Invalid choice. Please try again.
 goto MENU
 
 :INSTALL
 REM * Initialize status variables
 set "STATUS_COPY=OK"
-set "STATUS_ALIAS=OK"
-set "STATUS_PATH=OK"
-REM * Copy backup.exe to user profile
-copy "%~dp0\exe\backup.exe" "%USERPROFILE%\backup.exe" >nul 2>&1
-if not exist "%USERPROFILE%\backup.exe" set "STATUS_COPY=FAILED"
-REM * Ensure PowerShell profile directory exists
-if not exist "%USERPROFILE%\Documents\WindowsPowerShell" (
-    mkdir "%USERPROFILE%\Documents\WindowsPowerShell"
+REM * Create install dir
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+REM * Copy backup.exe to install dir
+copy "%~dp0\exe\backup.exe" "%INSTALL_DIR%\backup.exe" >nul 2>&1
+if not exist "%INSTALL_DIR%\backup.exe" set "STATUS_COPY=FAILED"
+REM * Add to PATH
+if "%PATH_SCOPE%"=="USER" (
+    echo %PATH% | find /I "%INSTALL_DIR%" >nul
+    if errorlevel 1 (
+        setx PATH "%PATH%;%INSTALL_DIR%"
+        set "STATUS_PATH=ADDED"
+    ) else (
+        set "STATUS_PATH=EXISTS"
+    )
+) else (
+    REM SYSTEM PATH
+    for /f "tokens=2* delims=    " %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SYSPATH=%%B"
+    echo %SYSPATH% | find /I "%INSTALL_DIR%" >nul
+    if errorlevel 1 (
+        setx PATH "%SYSPATH%;%INSTALL_DIR%" /M
+        set "STATUS_PATH=ADDED"
+    ) else (
+        set "STATUS_PATH=EXISTS"
+    )
 )
-REM * Add PowerShell alias for backup command
-echo Set-Alias backup "%~dp0exe\backup.exe" >> "%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
-if not exist "%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" set "STATUS_ALIAS=FAILED"
-REM * Add user profile to PATH
-setx PATH "%USERPROFILE%" /M >nul 2>&1
-if errorlevel 1 set "STATUS_PATH=FAILED"
 REM * Show summary
 cls
 setlocal enabledelayedexpansion
 echo =============================
 echo * Installation Summary
-if "%STATUS_COPY%"=="OK" (
-    echo   - backup.exe copied successfully.
+if "!STATUS_COPY!"=="OK" (
+    echo   - backup.exe copied successfully to !INSTALL_DIR!.
 ) else (
     echo   - Failed to copy backup.exe.
 )
-if "%STATUS_ALIAS%"=="OK" (
-    echo   - PowerShell alias added.
-) else (
-    echo   - Failed to add PowerShell alias.
-)
-if "%STATUS_PATH%"=="OK" (
-    echo   - User profile added to PATH.
-) else (
-    echo   - Failed to add user profile to PATH.
+if "!STATUS_PATH!"=="ADDED" (
+    echo   - Path updated: !INSTALL_DIR! added to PATH.
+) else if "!STATUS_PATH!"=="EXISTS" (
+    echo   - Path already contains !INSTALL_DIR!.
 )
 echo =============================
 echo Use `backup help` in CMD.
@@ -77,39 +86,23 @@ goto MENU
 :UNINSTALL
 REM * Initialize status variables
 set "STATUS_DEL=OK"
-set "STATUS_ALIAS_REMOVE=OK"
 REM * Remove backup.exe
-del "%USERPROFILE%\backup.exe" >nul 2>&1
-if exist "%USERPROFILE%\backup.exe" set "STATUS_DEL=FAILED"
-REM * Ensure PowerShell profile directory exists
-if not exist "%USERPROFILE%\Documents\WindowsPowerShell" (
-    mkdir "%USERPROFILE%\Documents\WindowsPowerShell"
-)
-REM * Remove PowerShell alias for backup command
-set "PROFILE=%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
-if exist "%PROFILE%" (
-    findstr /v /i "Set-Alias backup" "%PROFILE%" > "%PROFILE%.tmp"
-    move /Y "%PROFILE%.tmp" "%PROFILE%" >nul
-    if errorlevel 1 set "STATUS_ALIAS_REMOVE=FAILED"
+if "%INSTALL_SCOPE%"=="ALL" (
+    del "%ProgramData%\backup-setup\backup.exe" >nul 2>&1
+    if exist "%ProgramData%\backup-setup\backup.exe" set "STATUS_DEL=FAILED"
 ) else (
-    set "STATUS_ALIAS_REMOVE=NO_PROFILE"
+    del "%LOCALAPPDATA%\backup-setup\backup.exe" >nul 2>&1
+    if exist "%LOCALAPPDATA%\backup-setup\backup.exe" set "STATUS_DEL=FAILED"
 )
 REM * Show summary
 cls
 setlocal enabledelayedexpansion
 echo =============================
 echo * Uninstall Summary
-if "%STATUS_DEL%"=="OK" (
+if "!STATUS_DEL!"=="OK" (
     echo   - backup.exe removed.
 ) else (
     echo   - Failed to remove backup.exe.
-)
-if "%STATUS_ALIAS_REMOVE%"=="OK" (
-    echo   - PowerShell alias removed.
-) else if "%STATUS_ALIAS_REMOVE%"=="NO_PROFILE" (
-    echo   - PowerShell profile not found, no alias to remove.
-) else (
-    echo   - Failed to remove PowerShell alias.
 )
 echo =============================
 endlocal
@@ -119,19 +112,15 @@ goto MENU
 :CHECK
 REM * Check installation status
 set "STATUS_COPY=NOT FOUND"
-set "STATUS_ALIAS=NOT FOUND"
-set "STATUS_PATH=NOT FOUND / Not required"
+set "STATUS_PATH=NOT FOUND"
 REM * Check backup.exe
-if exist "%USERPROFILE%\backup.exe" set "STATUS_COPY=OK"
-REM * Check PowerShell alias
-set "PROFILE=%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
-if exist "%PROFILE%" (
-    findstr /i "Set-Alias backup" "%PROFILE%" >nul 2>&1 && set "STATUS_ALIAS=OK"
-)
+if exist "%LOCALAPPDATA%\backup-setup\backup.exe" set "STATUS_COPY=OK (user)"
+if exist "%ProgramData%\backup-setup\backup.exe" set "STATUS_COPY=OK (all users)"
 REM * Check PATH
 set "PATH_FOUND=NO"
-for %%A in ("%PATH:;=" "") do (
-    if /I "%%~A"=="%USERPROFILE%" set "PATH_FOUND=YES"
+for %%A in ("%PATH:;=" "%") do (
+    if /I "%%~A"=="%LOCALAPPDATA%\backup-setup" set "PATH_FOUND=YES"
+    if /I "%%~A"=="%ProgramData%\backup-setup" set "PATH_FOUND=YES"
 )
 if "%PATH_FOUND%"=="YES" set "STATUS_PATH=OK"
 REM * Show summary
@@ -139,8 +128,7 @@ cls
 echo =============================
 echo * Installation Check Summary
 echo   - backup.exe: %STATUS_COPY%
-echo   - PowerShell alias: %STATUS_ALIAS%
-echo   - User profile in PATH: %STATUS_PATH%
+echo   - backup-setup in PATH: %STATUS_PATH%
 echo =============================
 pause
 goto MENU
