@@ -19,6 +19,8 @@
 namespace fs = std::filesystem;
 using namespace std;
 
+const string BACKUP_VERSION = "1.1.2";
+
 // Function prototype for logAction
 void logAction(const std::string& entry);
 
@@ -86,6 +88,64 @@ bool isBackupInitialized() {
     }
     return false;
 }
+
+//* function to show version
+void showVersion() {
+    cout << ".backup Version: " << BACKUP_VERSION << endl;
+}
+
+//* function to get log directory in %LOCALAPPDATA%/backup-setup/logs
+string getLogDir() {
+#ifdef _WIN32
+    char* appdata = nullptr;
+    size_t len = 0;
+    _dupenv_s(&appdata, &len, "LOCALAPPDATA");
+    string dir = appdata ? string(appdata) + "\\backup-setup\\logs" : "backup-setup/logs";
+    if (appdata) free(appdata);
+    return dir;
+#else
+    const char* appdata = getenv("XDG_DATA_HOME");
+    string dir = appdata ? string(appdata) + "/backup-setup/logs" : string(getenv("HOME")) + "/.local/share/backup-setup/logs";
+    return dir;
+#endif
+}
+
+void printLogs() {
+    try {
+        string logDir = getLogDir();
+        string logFile = logDir + "/.backup-logs";
+        ifstream log(logFile);
+        if (!log) {
+            cout << "No logs found." << endl;
+            return;
+        }
+        cout << "Backup Logs:" << endl;
+        string line;
+        while (getline(log, line)) {
+            cout << "  " << line << endl;
+        }
+    } catch (const exception& e) {
+        cerr << "Error reading logs: " << e.what() << endl;
+    }
+}
+
+void copyLogsToCurrentDir() {
+    try {
+        string logDir = getLogDir();
+        string logFile = logDir + "/.backup-logs";
+        string destFile = "./.backup-logs";
+        if (!fs::exists(logFile)) {
+            cout << "No logs found to copy." << endl;
+            return;
+        }
+        fs::copy_file(logFile, destFile, fs::copy_options::overwrite_existing);
+        cout << "Logs copied to " << destFile << endl;
+    } catch (const exception& e) {
+        cerr << "Error copying logs: " << e.what() << endl;
+    }
+}
+
+
 
 //* function to read .backupignore patterns
 set<string> readBackupIgnore() {
@@ -201,14 +261,17 @@ void pullLastBackup() {
 
 //* function to show help menu
 void showHelp() {
-    cout << "Backup Manager Commands:\n";
-    cout << "  backup init            -> Initialize backup system\n";
-    cout << "  backup do              -> Create a new backup\n";
-    cout << "  backup auto --min X    -> Auto backup every X minutes\n";
-    cout << "  backup remove --all    -> Delete all backups\n";
-    cout << "  backup pull --last     -> Restore from the last backup\n";
-    cout << "  backup meta            -> Show backup meta information\n";
-    cout << "  backup help            -> Show available commands\n";
+    cout << ".backup Commands:\n";
+    cout << "  backup init              -> Initialize backup system\n";
+    cout << "  backup do                -> Create a new backup\n";
+    cout << "  backup auto --min X      -> Auto backup every X minutes\n";
+    cout << "  backup remove --all      -> Delete all backups\n";
+    cout << "  backup pull --last       -> Restore from the last backup\n";
+    cout << "  backup meta              -> Show backup meta information\n";
+    cout << "  backup logs              -> Show backup logs\n";
+    cout << "  backup logs --copy       -> Copy logs to current directory\n";
+    cout << "  backup --version | --v   -> Show version\n";
+    cout << "  backup help              -> Show available commands\n";
 }
 
 void showBackupMeta() {
@@ -257,22 +320,6 @@ void setWorkingDirToExe() {
     }
 }
 
-//* function to get log directory in %LOCALAPPDATA%/backup-setup/logs
-string getLogDir() {
-#ifdef _WIN32
-    char* appdata = nullptr;
-    size_t len = 0;
-    _dupenv_s(&appdata, &len, "LOCALAPPDATA");
-    string dir = appdata ? string(appdata) + "\\backup-setup\\logs" : "backup-setup/logs";
-    if (appdata) free(appdata);
-    return dir;
-#else
-    const char* appdata = getenv("XDG_DATA_HOME");
-    string dir = appdata ? string(appdata) + "/backup-setup/logs" : string(getenv("HOME")) + "/.local/share/backup-setup/logs";
-    return dir;
-#endif
-}
-
 //* function to log to .backup-logs in logs/ folder in %LOCALAPPDATA%/backup-setup
 void logAction(const string& entry) {
     // Log to appdata
@@ -296,7 +343,19 @@ void logAction(const string& entry) {
 
 //* function to parse and execute commands
 void executeCommand(const string& cmd) {
-    if (cmd == "backup init") {
+    if (cmd == "backup --version") {
+        showVersion();
+        logAction("Ran: backup --version");
+    } else if (cmd == "backup --v") {
+        showVersion();
+        logAction("Ran: backup --v");
+    } else if (cmd == "backup logs") {
+        printLogs();
+        logAction("Ran: backup logs");
+    } else if (cmd == "backup logs --copy") {
+        copyLogsToCurrentDir();
+        logAction("Ran: backup logs --copy");
+    } else if (cmd == "backup init") {
         initBackup();
         logAction("Ran: backup init");
     } else if (cmd == "backup do") {

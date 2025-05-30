@@ -7,6 +7,7 @@
         "algorithm": "cpp",
         "thread": "cpp",
         "string": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "iostream": "cpp"
     }
 }

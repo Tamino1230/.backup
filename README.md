@@ -3,6 +3,9 @@ by Tamino1230
 
 A simple, global backup utility for Windows, written in C++. Includes a user-friendly installer and uninstaller for easy setup and removal.
 
+### Installation Path
+The normal Installation Path is: `c:\Users\<your-username>\AppData\Local\backup-setup\backup.exe`
+
 ---
 
 ## For running .backup ->
